@@ -1,36 +1,31 @@
-import requests
-import json
-import gradio as gr
-
-url = "http://localhost:11434/api/generate"
-headers = {
-    'Content-Type': 'application/json'
-}
-
-history = []
-
-def generate_response(prompt):
-    history.append(prompt)
-    final_prompt = '\n'.join(history)
-    data = {
-
-        'model': 'coder',
-        'prompt': final_prompt,
-        'stream': False
-    }
-    response = requests.post(url, headers=headers, data=json.dumps(data))
-    if response.status_code==200:
-        response = response.text
-        data = json.loads(response)
-        actual_response = data['response']
-        return actual_response
-    else:
-        print("Error", response.text)
+import streamlit as st
+from langchain_ollama import ChatOllama
 
 
-interface = gr.Interface(
-    fn=generate_response,
-    inputs=gr.Textbox(lines=4, placeholder='Enter you prompt'),
-    outputs='text'
-)
-interface.launch()
+st.title("👨‍💻 Code Assistant - Codellama")
+
+if "messages" not in st.session_state:
+    st.session_state["messages"] = [
+        {
+            "role": "assistant",
+            "content": "Hi, I'm a code assistant. How can I help you ?"
+        }
+    ]
+
+for msg in st.session_state.messages:
+    st.chat_message(msg["role"]).write(msg['content'])
+
+if prompt:=st.chat_input(placeholder="Write a python code for binary search"):
+    st.session_state.messages.append({"role":"user", "content":prompt})
+    st.chat_message("user").write(prompt)
+
+    # LLM - Codellama
+    llm = ChatOllama(model='codellama:7b')
+
+    with st.spinner('Thinking...'):
+        # st_cb = StreamlitCallbackHandler(st.container(), expand_new_thoughts=False)
+        # response = llm.invoke(st.session_state.messages, callbacks=[st_cb])
+        response = llm.invoke(st.session_state.messages)
+        st.session_state.messages.append({"role":"assistant", "content":response.content})
+        st.markdown(response.content)
+        # print(response.content)
